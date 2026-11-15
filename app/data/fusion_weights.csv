@@ -1,0 +1,4 @@
+component,weight
+Logistic Regression,0.333
+Random Forest,0.333
+Gradient Boosting,0.333

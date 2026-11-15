@@ -1,0 +1,5 @@
+model,test_mae_days,test_r2,alpha
+Always guess the average,1.75,0.0,
+Linear,1.51,0.21,
+Ridge,1.51,0.21,100.0
+Lasso,1.52,0.21,0.01

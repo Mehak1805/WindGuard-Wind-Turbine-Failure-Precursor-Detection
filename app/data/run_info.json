@@ -1,0 +1,36 @@
+{
+ "data_source": "synthetic",
+ "scenario": "demo",
+ "created": "2026-11-14T23:36:59",
+ "train_years": [
+  2016,
+  2017,
+  2018,
+  2019,
+  2020
+ ],
+ "val_year": 2021,
+ "test_year": 2022,
+ "pre_failure_days": 7,
+ "n_features": 37,
+ "feature_sensors": [
+  "Gear oil temperature (\u00b0C)",
+  "Front bearing temperature (\u00b0C)",
+  "Generator bearing front temperature (\u00b0C)",
+  "Generator bearing rear temperature (\u00b0C)",
+  "Stator temperature 1 (\u00b0C)",
+  "Transformer temperature (\u00b0C)",
+  "Nacelle temperature (\u00b0C)",
+  "Gear oil inlet pressure (bar)",
+  "Hydraulic oil pressure (bar)",
+  "Tower Acceleration X (mm/ss)",
+  "Tower Acceleration Y (mm/ss)",
+  "Blade angle (pitch position) A (\u00b0)"
+ ],
+ "fused_watch_threshold": 0.4483188024349766,
+ "fused_high_threshold": 0.5471630639299118,
+ "n_test_rows": 50980,
+ "n_test_episodes": 13,
+ "rul_model": "Lasso",
+ "disclaimer": "SIMULATION (scenario: demo): synthetic SCADA, results are not performance on real turbines."
+}
