@@ -13,3 +13,6 @@ venv/
 
 # App runtime outputs
 app/outputs/
+
+# CSV files (data and generated outputs) are not pushed
+*.csv
