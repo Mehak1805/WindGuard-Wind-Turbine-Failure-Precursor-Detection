@@ -27,7 +27,7 @@ async def lifespan(app):
     yield
 
 app = FastAPI(title="WindGuard API", version="1.0", lifespan=lifespan,
-              description="Live-replay failure-precursor scoring for wind-turbine SCADA. SIMULATION on synthetic data unless the notebook was run on real data.")
+              description="Live-replay failure-precursor scoring for wind-turbine SCADA. It replays the notebook's 2022 test-year scores; see run_info.disclaimer for the data-origin note.")
 
 
 def rec(df: pd.DataFrame) -> list:
@@ -140,11 +140,11 @@ def fleet_snapshot():
         completeness = float(g[SENSORS].notna().all(axis=1).tail(168).mean())
         day = g.tail(24)
         flat = int(sum(day[s].nunique() <= 1 for s in HEALTH_SENSORS)) if len(day) >= 12 else 0
-        age = (t - r["ts"]).total_seconds() / 3600
+        age = max(0.0, (t - r["ts"]).total_seconds() / 3600)
         offline = age > 6                                   # no new data for 6 h: do not show a stale score as if it were live
         operating = "Offline (no data)" if offline or r["regime"] == "No data" else ("Idle (low wind)" if r["regime"] == REGIME_NAMES[0] else "Producing")
         rows.append(dict(turbine_id=tb, ts=str(r["ts"]), band="Offline" if offline else r["band"], offline=bool(offline), risk=float(r["risk"]), risk_24h_max=float(day["risk"].max()), regime=r["regime"], operating=operating,
-                         wind=_n(r[SENSORS[0]]), power=_n(r[SENSORS[1]]), gear_oil=_n(r["Gear oil temperature (°C)"]), anomaly=float(r["dev_norm"]),
+                         wind=_n(r[SENSORS[0]]), power=_n(r[SENSORS[1]]), gear_oil=_n(r["Gear oil temperature (°C)"]), hydraulic=_n(r["Hydraulic oil pressure (bar)"]), anomaly=float(r["dev_norm"]),
                          completeness=round(completeness, 3), flatlined_sensors=flat, age_hours=round(age, 1),
                          spark=[round(float(v), 4) for v in g["risk"].tail(72).iloc[::3]]))
     a = alert_table(t); win = S.live[(S.live["ts"] <= t) & (S.live["ts"] > t - pd.Timedelta(days=30))]
@@ -157,10 +157,33 @@ def fleet_snapshot():
              alerts_total=int(len(a)), failures_so_far=int(len(fails)), failures_warned=int(fails["t_fail"].apply(lambda x: ((conf["t_fail"] == x)).any()).sum()) if len(fails) else 0,
              false_alarms=int((a["status"] == "False alarm").sum()) if len(a) else 0,
              median_lead_days=_n(conf["lead_days"].median()) if len(conf) else None)
-    return dict(sim_time=str(t), kpis=k, turbines=rows, regime_share=reg, regimes=REGIME_NAMES)
+    rs = win.groupby("regime").agg(wind_mean=(SENSORS[0], "mean"), power_mean=(SENSORS[1], "mean")).round(1)
+    regime_stats = {name: dict(wind_mean=_n(rs.loc[name, "wind_mean"]) if name in rs.index else None, power_mean=_n(rs.loc[name, "power_mean"]) if name in rs.index else None,
+                               turbines_now=sum(r["regime"] == name for r in rows_live)) for name in REGIME_NAMES}
+    return dict(sim_time=str(t), kpis=k, turbines=rows, regime_share=reg, regimes=REGIME_NAMES, regime_stats=regime_stats, rated_kw=RATED_KW)
 
 
 def _n(x): return None if pd.isna(x) else round(float(x), 3)
+
+
+RATED_KW = 2050.0        # rated power used by the notebook (power_pct = Power / 2050 * 100)
+
+
+@app.get("/fleet/risk_series")
+def fleet_risk_series(hours: int = 24):
+    """Fleet risk over the last `hours`: mean and highest fused risk across the turbines, one point per hour (every 6th hour beyond 7 days)."""
+    t = now(); w = S.live[(S.live["ts"] <= t) & (S.live["ts"] > t - pd.Timedelta(hours=hours))]
+    f = w.groupby("ts")["risk"].agg(mean_risk="mean", max_risk="max").reset_index()
+    if len(f) > 400: f = f.iloc[::max(1, len(f) // 400)]
+    return rec(f)
+
+
+@app.get("/fleet/power_curve")
+def fleet_power_curve(days: int = 7, max_points: int = 1500):
+    """Wind speed against power for the whole fleet over the last `days` (sampled), with the fleet's mean capacity factor."""
+    t = now(); w = S.live[(S.live["ts"] <= t) & (S.live["ts"] > t - pd.Timedelta(days=days))].dropna(subset=[SENSORS[0], SENSORS[1]])
+    pts = w.sample(min(len(w), max_points), random_state=0)[["turbine_id", SENSORS[0], SENSORS[1]]].rename(columns={SENSORS[0]: "wind", SENSORS[1]: "power"})
+    return dict(points=rec(pts), capacity_factor=_n(w[SENSORS[1]].clip(lower=0).mean() / RATED_KW) if len(w) else None, rated_kw=RATED_KW)
 
 
 @app.get("/fleet/trend")
@@ -187,7 +210,9 @@ def turbine_history(tb: int):
     """All failures of this turbine in the replayed year that have already happened, plus its alerts."""
     check_tb(tb); t = now(); a = alert_table(t); a = a[a["turbine_id"] == tb].sort_values("start", ascending=False)
     ep = S.episodes[(S.episodes["turbine"] == tb) & (S.episodes["t_fail"] <= t) & (S.episodes["t_fail"] >= S.live_start)]
-    return dict(alerts=rec(a.drop(columns=["top_drivers"])), failures=rec(ep[["t_fail", "t_end", "message", "warned_watch", "warned_high"]]))
+    al = rec(a.drop(columns=["top_drivers"]))
+    for o, d in zip(al, a["top_drivers"]): o["top_drivers"] = parse_drivers(d)
+    return dict(alerts=al, failures=rec(ep[["t_fail", "t_end", "message", "warned_watch", "warned_high"]]))
 
 
 # ---------------------------------------------------------------------------------------------------------------------- 2. anomaly & alerts
@@ -227,7 +252,7 @@ def anomaly_threshold(value: float = 1.0):
 @app.get("/explain/global")
 def explain_global():
     mc = S.tables["model_comparison"]
-    cols = ["model", "family", "threshold", "pr_auc", "roc_auc", "precision", "recall", "f1", "episode_recall", "median_lead_days", "fa_per_turbine_year"]
+    cols = ["model", "family", "column", "threshold", "accuracy", "pr_auc", "roc_auc", "precision", "recall", "f1", "tp", "fp", "fn", "tn", "episode_recall", "median_lead_days", "fa_per_turbine_year"]
     return dict(importance=rec(S.tables["importance"]), fusion=rec(S.tables["fusion"]), models=rec(mc[[c for c in cols if c in mc.columns]]))
 
 

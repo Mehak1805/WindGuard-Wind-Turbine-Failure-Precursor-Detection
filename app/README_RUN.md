@@ -1,6 +1,6 @@
 # WindGuard - end-to-end dashboard (backend + frontend)
 
-    windguard_app/
+    app/
     ├── run_all.py            <- starts everything (python run_all.py)
     ├── requirements.txt
     ├── backend/              FastAPI service: data layer, common predict(), live-replay clock
@@ -32,14 +32,20 @@ controls the clock; every page asks the backend "what is true at the current rep
 Outcomes (failure confirmed / false alarm) only use information available at the replay time - the future is never shown.
 
 ## Where the data comes from
-`data/` holds the files exported by the **WindGuard Simple Drive** notebook (last section, "9. Export for the dashboard"), so the notebook,
+`data/` holds the files exported by the notebook (`notebooks/WindGuard_complete_proj.ipynb`, last section "9. Dashboard Export"), so the notebook,
 the report and the dashboard show the same numbers. To refresh the dashboard after re-running the notebook: copy the files from
-`<your Drive folder>/results/dashboard_export/` into `data/` and restart (`python run_all.py`).
+`outputs/dashboard_export/` into `app/data/` and restart (`python run_all.py`).
+
+## The pages
+Fleet Overview · Anomaly & Alerts · Turbine Risk · Explainability & Models · Validation & Cross-Farm · Turbine Details.
+Every number comes from the notebook export or from the backend's calculations on it; nothing is invented for display.
 
 ## Honest scope
-* Data is SYNTHETIC (demo scenario): a simulation, not real-turbine performance.
+* The fleet pages cover the 6 Kelmarsh turbines (the only farm with hourly scores). Penmanshiel appears on *Validation & Cross-Farm* only.
+* **Data origin is unconfirmed:** the CSV headers say "-like" and the ground-truth files hold simulation parameters, so these results show the
+  workflow, not proven performance on real turbines. The same note is shown on every page.
 * `predict()` serves the hourly scores the notebook computed; it does not score brand-new raw SCADA rows (that would need the notebook's
   feature pipeline in front of the models).
 * The fused risk is a plain average of Logistic Regression, Random Forest and Gradient Boosting probabilities. The Isolation Forest is weak;
   the Anomaly page therefore also shows a PCA sensor-deviation score.
-* The test year has only 13 failures, so every interval is wide. About 40 of 48 alerts in the test year are false alarms (short Watch/High episodes).
+* The test year has only 13 failures, so every interval is wide, and about 5-6 false alarms per turbine-year remain at the chosen threshold.

@@ -1,9 +1,9 @@
 kind,n,median_percentile
-converter,9,0.98
+converter,9,0.97
 gearbox,20,0.99
 genbear,23,0.99
-hydraulic,10,0.42
+hydraulic,10,0.47
 mainbear,13,0.98
-pitch,28,0.77
-stator,13,0.97
+pitch,28,0.64
+stator,13,0.96
 yaw,12,0.99

@@ -1,4 +1,4 @@
 model,pr_auc,roc_auc,precision,recall,farm,normalisation
-Gradient Boosting,0.612,0.884,0.836,0.612,Kelmarsh 2022 (in-farm),Kelmarsh
-Gradient Boosting,0.589,0.828,0.546,0.584,Penmanshiel (cross-farm),per-farm (target farm's own early data)
-Gradient Boosting,0.151,0.727,0.084,0.627,Penmanshiel (cross-farm),Kelmarsh statistics (no adaptation)
+Gradient Boosting,0.615,0.884,0.816,0.624,Kelmarsh 2022 (in-farm),Kelmarsh
+Gradient Boosting,0.586,0.807,0.325,0.625,Penmanshiel (cross-farm),per-farm (target farm's own early data)
+Gradient Boosting,0.122,0.722,0.081,0.62,Penmanshiel (cross-farm),Kelmarsh statistics (no adaptation)

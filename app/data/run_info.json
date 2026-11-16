@@ -1,7 +1,6 @@
 {
- "data_source": "synthetic",
- "scenario": "demo",
- "created": "2026-11-14T23:36:59",
+ "data_source": "data/raw (Kelmarsh + Penmanshiel SCADA CSV files)",
+ "created": "2026-11-17T01:05:58",
  "train_years": [
   2016,
   2017,
@@ -27,10 +26,10 @@
   "Tower Acceleration Y (mm/ss)",
   "Blade angle (pitch position) A (\u00b0)"
  ],
- "fused_watch_threshold": 0.4483188024349766,
- "fused_high_threshold": 0.5471630639299118,
+ "fused_watch_threshold": 0.47105777177864505,
+ "fused_high_threshold": 0.5726636532534088,
  "n_test_rows": 50980,
  "n_test_episodes": 13,
  "rul_model": "Lasso",
- "disclaimer": "SIMULATION (scenario: demo): synthetic SCADA, results are not performance on real turbines."
+ "disclaimer": "Data read from the CSV files in data/raw. The file headers describe the turbines as '-like' and the ground-truth files hold simulation parameters, so confirm where the data came from before presenting these numbers as real-turbine performance."
 }
